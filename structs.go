@@ -104,6 +104,11 @@ func (s *Struct) FillMap(out map[string]interface{}) {
 			name = tagName
 		}
 
+		if tagOpts.Has("omit") {
+			// If we flag this to omit, then leave it out
+			continue
+		}
+
 		// if the value is a zero value and the field is marked as omitempty do
 		// not include
 		if tagOpts.Has("omitempty") {
@@ -137,6 +142,18 @@ func (s *Struct) FillMap(out map[string]interface{}) {
 				out[name] = s.String()
 			}
 			continue
+		} else if tagOpts.Has("dereference") {
+			// This tag is for pointers. If it has a value, we want the pointer dereferenced in the Map. If it is nil, we don't want it in the map
+			if val.Kind() == reflect.Ptr {
+				zero := reflect.Zero(val.Type()).Interface()
+				current := val.Interface()
+				if reflect.DeepEqual(current, zero) {
+					// Have to omit if nil
+					continue
+				}
+				val = val.Elem()
+				finalVal = val.Interface()
+			}
 		}
 
 		if isSubStruct && (tagOpts.Has("flatten")) {
